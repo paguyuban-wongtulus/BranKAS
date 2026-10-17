@@ -87,7 +87,7 @@
 
 <body class="w-full h-[100dvh] flex flex-col justify-between text-white bg-black">
 
-<!-- Loading Indicator -->
+<!-- Fail-Safe Global Loader -->
 <div id="loading-overlay" class="fixed inset-0 z-[99999] bg-[#000000] flex flex-col items-center justify-center transition-opacity duration-300">
   <div class="relative flex justify-center items-center">
     <div class="w-14 h-14 border-4 border-white/10 border-t-ios-blue rounded-full animate-spin"></div>
@@ -97,6 +97,17 @@
   </div>
   <p id="loading-text" class="text-white/50 font-semibold text-[11px] mt-4 tracking-[0.2em] uppercase">Memuat sistem branKAS...</p>
 </div>
+
+<script>
+  // FAIL-SAFE: Jamin loader pasti hilang setelah max 1.2 detik demi mencegah stuck di GitHub Pages
+  setTimeout(() => {
+    const el = document.getElementById('loading-overlay');
+    if (el && el.style.display !== 'none') {
+      el.style.opacity = '0';
+      setTimeout(() => el.style.display = 'none', 300);
+    }
+  }, 1200);
+</script>
 
 <!-- Dynamic Island Toast -->
 <div id="dynamic-island-toast" class="toast-pill">
@@ -140,10 +151,8 @@
 
 <!-- Main App Wrapper -->
 <div id="app-wrapper" class="w-full h-full flex flex-col hidden relative items-center">
-  <!-- COMPACT HEADER WITH BRAND & CONTROLS -->
   <header class="fixed top-0 left-0 right-0 z-40 blur-header px-3 py-2 flex items-center justify-center shadow-md">
     <div class="w-full max-w-md flex items-center justify-between">
-      <!-- Left: Logo & App Title -->
       <div class="flex items-center gap-2">
         <div id="header-logo-box" class="w-8 h-8 rounded-[10px] bg-gradient-to-br from-ios-blue to-blue-600 flex items-center justify-center text-white shadow-md overflow-hidden relative border border-white/15 shrink-0">
           <div class="app-logo-render-target flex items-center justify-center w-full h-full text-[15px]">
@@ -163,7 +172,6 @@
         </div>
       </div>
       
-      <!-- Right: Logout Button -->
       <div class="flex items-center gap-1.5">
         <button id="header-logout-btn" class="w-8 h-8 rounded-full bg-ios-red/15 border border-ios-red/25 flex items-center justify-center text-ios-red hover:bg-ios-red/25 active-spring shrink-0 text-xs" title="Keluar">
           <i class="fa-solid fa-power-off"></i>
@@ -172,7 +180,6 @@
     </div>
   </header>
 
-  <!-- MAIN SCROLLABLE CONTAINER -->
   <div class="flex flex-1 w-full pt-[52px] pb-[76px] h-full justify-center">
     <main class="flex-1 w-full max-w-md overflow-y-auto overscroll-y-contain scroll-smooth p-3 relative [-webkit-overflow-scrolling:touch] transform-gpu">
       
@@ -185,7 +192,6 @@
           </div>
         </div>
 
-        <!-- Compact CC Module Card -->
         <div class="ios-cc-module p-4 relative flex flex-col justify-between overflow-hidden shadow-md cursor-default">
            <div class="absolute -top-8 -right-8 w-48 h-48 bg-ios-blue/25 rounded-full blur-[45px] pointer-events-none"></div>
            
@@ -214,9 +220,7 @@
            </div>
         </div>
 
-        <!-- Dashboard Sub-sections -->
         <div class="grid grid-cols-1 gap-3 pt-1">
-          <!-- Unpaid Dues Module -->
           <div class="col-span-1">
             <div class="flex items-center justify-between mb-1.5 px-1">
               <h3 class="text-[11px] font-semibold tracking-widest text-white/50 uppercase">Belum Bayar Iuran</h3>
@@ -232,7 +236,6 @@
             </div>
           </div>
 
-          <!-- Recent Activity Module -->
           <div class="col-span-1">
             <div class="flex items-center justify-between mb-1.5 px-1">
               <h3 class="text-[11px] font-semibold tracking-widest text-white/50 uppercase">Aktivitas Terakhir</h3>
@@ -344,7 +347,6 @@
           </div>
         </div>
 
-        <!-- Detailed Breakdown Sections -->
         <div class="grid grid-cols-1 gap-3">
           <div class="ios-list p-3 shadow relative overflow-hidden bg-[#1C1C1E]/80">
             <h4 class="text-[11px] font-semibold uppercase tracking-widest mb-2.5 text-ios-green flex items-center gap-1.5 pb-1.5 border-b border-white/10"><i class="fa-solid fa-chart-simple"></i> Rincian Pemasukan</h4>
@@ -773,10 +775,9 @@ function updateNetworkStatusBadge(status) {
 async function initFirebaseAndApp() {
   updateNetworkStatusBadge('connecting');
   const safetyTimer = setTimeout(() => {
-    console.warn("Firebase connection timeout or blocked domain, falling back to local mode.");
     updateNetworkStatusBadge('offline');
     loadLocalFallbackData();
-  }, 1500);
+  }, 1200);
 
   try {
     app = initializeApp(firebaseConfig);
@@ -795,7 +796,6 @@ async function initFirebaseAndApp() {
     setupRealtimeListeners();
   } catch (err) {
     clearTimeout(safetyTimer);
-    console.warn("Firebase Auth / Connection error. Falling back to local mode:", err);
     updateNetworkStatusBadge('offline');
     loadLocalFallbackData();
   }
@@ -821,7 +821,6 @@ function setupRealtimeListeners() {
     collectionsLoaded++;
     if (collectionsLoaded >= totalCollections) {
       updateNetworkStatusBadge('online');
-      showLoading(false);
       checkAndSeedInitialData();
     }
   };
@@ -843,7 +842,7 @@ function setupRealtimeListeners() {
     localStorage.setItem(CACHE_KEY, JSON.stringify(appState));
     if (appState.currentUser) refreshCurrentView();
     onCollectionUpdated();
-  }, err => {
+  }, () => {
     const simpleTxQuery = query(getCollectionRef('transactions'), limitQuery(100));
     const unsubSimple = onSnapshot(simpleTxQuery, snapshot => {
       const txs = [];
@@ -864,7 +863,7 @@ function setupRealtimeListeners() {
     localStorage.setItem(CACHE_KEY, JSON.stringify(appState));
     if (appState.currentUser) refreshCurrentView();
     onCollectionUpdated();
-  }, err => { onCollectionUpdated(); updateNetworkStatusBadge('offline'); });
+  }, () => { onCollectionUpdated(); updateNetworkStatusBadge('offline'); });
   activeUnsubscribers.push(unsubMembers);
 
   const unsubUsers = onSnapshot(getCollectionRef('users'), snapshot => {
@@ -874,7 +873,7 @@ function setupRealtimeListeners() {
     localStorage.setItem(CACHE_KEY, JSON.stringify(appState));
     if (appState.currentUser) refreshCurrentView();
     onCollectionUpdated();
-  }, err => { onCollectionUpdated(); updateNetworkStatusBadge('offline'); });
+  }, () => { onCollectionUpdated(); updateNetworkStatusBadge('offline'); });
   activeUnsubscribers.push(unsubUsers);
 
   const unsubCategories = onSnapshot(getCollectionRef('categories'), snapshot => {
@@ -884,7 +883,7 @@ function setupRealtimeListeners() {
     localStorage.setItem(CACHE_KEY, JSON.stringify(appState));
     if (appState.currentUser) refreshCurrentView();
     onCollectionUpdated();
-  }, err => { onCollectionUpdated(); updateNetworkStatusBadge('offline'); });
+  }, () => { onCollectionUpdated(); updateNetworkStatusBadge('offline'); });
   activeUnsubscribers.push(unsubCategories);
 
   const unsubSettings = onSnapshot(getCollectionRef('settings'), snapshot => {
@@ -905,10 +904,8 @@ function setupRealtimeListeners() {
     localStorage.setItem(CACHE_KEY, JSON.stringify(appState));
     if (appState.currentUser) refreshCurrentView();
     onCollectionUpdated();
-  }, err => { onCollectionUpdated(); updateNetworkStatusBadge('offline'); });
+  }, () => { onCollectionUpdated(); updateNetworkStatusBadge('offline'); });
   activeUnsubscribers.push(unsubSettings);
-
-  setTimeout(() => { showLoading(false); }, 1500);
 }
 
 async function checkAndSeedInitialData() {
@@ -966,7 +963,6 @@ function loadLocalFallbackData() {
       transactions: []
     };
   }
-  showLoading(false);
 }
 
 function getLocalDateString(d = new Date()) {
@@ -992,18 +988,6 @@ function setSmartGreeting() {
   else greeting = 'Selamat Malam';
   const label = document.getElementById('dash-greeting-label');
   if (label) label.innerText = greeting;
-}
-
-function showLoading(show) {
-  const el = document.getElementById('loading-overlay');
-  if(!el) return;
-  if (show) {
-    el.style.display = 'flex';
-    requestAnimationFrame(() => el.style.opacity = '1');
-  } else {
-    el.style.opacity = '0';
-    setTimeout(() => el.style.display = 'none', 300);
-  }
 }
 
 let toastTimer = null;
@@ -1839,7 +1823,6 @@ function renderReports() {
   document.getElementById('report-out').innerText = formatRp(pOut);
   document.getElementById('report-net').innerText = formatRp(pBal + pIn - pOut);
 
-  // Rincian Pemasukan
   const maxIn = Math.max(...Object.values(cIn), 1);
   const rcIn = document.getElementById('container-report-cat-in');
   const inEntries = Object.entries(cIn).sort((a,b) => b[1] - a[1]);
@@ -1881,7 +1864,6 @@ function renderReports() {
     }).join('');
   }
 
-  // Rincian Pengeluaran
   const maxOut = Math.max(...Object.values(cOut), 1);
   const rcOut = document.getElementById('container-report-cat-out');
   const outEntries = Object.entries(cOut).sort((a,b) => b[1] - a[1]);
@@ -1943,4 +1925,19 @@ function generateWhatsAppMessageText(customUrl = '') {
   const pBal = document.getElementById('report-prev-balance').innerText;
   const pIn = document.getElementById('report-in').innerText;
   const pOut = document.getElementById('report-out').innerText;
-  const pNet = document.getElementB
+  const pNet = document.getElementById('report-net').innerText;
+  
+  txt += `💼 Saldo Akhir ${prevMonthName} ${prevYearStr}: ${pBal}\n📈 Pemasukan ${currentMonthName} ${y}: ${pIn}\n📉 Pengeluaran ${currentMonthName} ${y}: ${pOut}\n💰 *KAS AKTIF: ${pNet}*\n\n`;
+  
+  let iuranBulananTotal = 0;
+  let otherIncomeDetails = [];
+  let expenseDetails = [];
+
+  appState.transactions.forEach(tx => {
+    if(!tx.date) return;
+    const [ty, tm] = tx.date.split('-');
+    if (ty === y && tm === m) {
+      const amt = Number(tx.amount) || 0;
+      if (tx.type === 'Pemasukan') {
+        if (isIuran(tx.category)) iuranBulananTotal += amt;
+        else otherIncomeDetails.push(`+ ${tx.category}: ${
