@@ -773,10 +773,10 @@ function updateNetworkStatusBadge(status) {
 async function initFirebaseAndApp() {
   updateNetworkStatusBadge('connecting');
   const safetyTimer = setTimeout(() => {
-    console.warn("Firebase connection timeout, falling back to local mode.");
+    console.warn("Firebase connection timeout or blocked domain, falling back to local mode.");
     updateNetworkStatusBadge('offline');
     loadLocalFallbackData();
-  }, 3000);
+  }, 1500);
 
   try {
     app = initializeApp(firebaseConfig);
@@ -908,7 +908,7 @@ function setupRealtimeListeners() {
   }, err => { onCollectionUpdated(); updateNetworkStatusBadge('offline'); });
   activeUnsubscribers.push(unsubSettings);
 
-  setTimeout(() => { showLoading(false); }, 2500);
+  setTimeout(() => { showLoading(false); }, 1500);
 }
 
 async function checkAndSeedInitialData() {
@@ -1943,4 +1943,4 @@ function generateWhatsAppMessageText(customUrl = '') {
   const pBal = document.getElementById('report-prev-balance').innerText;
   const pIn = document.getElementById('report-in').innerText;
   const pOut = document.getElementById('report-out').innerText;
-  const pNet = document.getElementById('report-net').
+  const pNet = document.getElementB
